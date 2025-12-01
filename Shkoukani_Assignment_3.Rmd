@@ -1,0 +1,68 @@
+---
+title: "Assignment 3"
+output: html_document
+date: "2025-11-30"
+author: "Ibrahim Shkoukani"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+For my assignment I will be build and evaluate a regression model that predicts car fuel efficiency.
+
+
+
+Loading in the dataset
+
+```{r}
+data(mtcars)
+```
+
+
+Exploratory Data Analysis
+
+```{r}
+summary(mtcars)
+cor(mtcars[, c("mpg", "wt", "hp")])
+pairs(mtcars[, c("mpg", "wt", "hp")])
+
+
+```
+
+
+Building regression model
+```{r}
+model <- lm(mpg ~ wt + hp, data = mtcars)
+summary(model)
+```
+
+
+Evaluating residuals
+```{r}
+par(mfrow = c(2, 2))
+plot(model)
+par(mfrow = c(1, 1))
+```
+
+
+
+Making a prediction
+
+```{r}
+new_car <- data.frame(wt = 3.0, hp = 150)
+predict(model, new_car)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
