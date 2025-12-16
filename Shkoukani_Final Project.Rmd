@@ -1,0 +1,237 @@
+---
+title: "Assignment 2"
+output: html_document
+date: "2025-11-04"
+author: "Ibrahim Shkoukani"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+For my assignment I will be analyzing the mtcars dataset and whether the type of transmission affects the fuel efficiency of a car.
+
+
+
+
+Loading in the dataset
+
+```{r}
+install.packages(c("tidyverse","skimr","janitor","corrplot","caret","broom"))
+library(tidyverse)
+library(skimr)
+library(janitor)
+library(corrplot)
+library(caret)
+library(broom)
+
+
+```
+
+
+verifying data
+```{r}
+ins <- read.csv("insurance.csv")
+
+glimpse(ins)
+summary(ins)
+skim(ins)
+
+
+```
+
+
+missing values
+
+```{r}
+colSums(is.na(ins))
+
+```
+
+
+Data Cleaning & Preprocessing
+```{r}
+ins <- ins %>%
+  mutate(
+    sex = factor(sex),
+    smoker = factor(smoker),
+    region = factor(region)
+  )
+
+ins <- ins %>% mutate(log_charges = log(charges))
+
+```
+
+
+
+Descriptive Statistics
+```{r}
+ins %>%
+  summarise(
+    age_mean = mean(age), age_median = median(age), age_var = var(age), age_sd = sd(age),
+    bmi_mean = mean(bmi), bmi_median = median(bmi), bmi_var = var(bmi), bmi_sd = sd(bmi),
+    children_mean = mean(children), children_median = median(children), children_var = var(children), children_sd = sd(children),
+    charges_mean = mean(charges), charges_median = median(charges), charges_var = var(charges), charges_sd = sd(charges)
+  )
+
+```
+
+```{r}
+get_mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+get_mode(ins$age)
+get_mode(ins$children)
+
+# “Mode” for continuous is unstable; rounding makes it interpretable:
+get_mode(round(ins$bmi, 2))
+get_mode(round(ins$charges, 2))
+
+```
+
+
+
+Frequency tables
+```{r}
+tabyl(ins, smoker)
+tabyl(ins, smoker) %>% adorn_percentages("col") %>% adorn_pct_formatting()
+
+tabyl(ins, region)
+tabyl(ins, sex)
+
+```
+
+
+
+
+Data Visualization
+```{r}
+ggplot(ins, aes(charges)) + geom_histogram(bins = 30)
+ggplot(ins, aes(log_charges)) + geom_histogram(bins = 30)
+
+ggplot(ins, aes(region)) + geom_bar()
+
+ggplot(ins, aes(smoker, charges)) + geom_boxplot()
+ggplot(ins, aes(smoker, log_charges)) + geom_boxplot()
+
+```
+
+```{r}
+ggplot(ins, aes(bmi, charges, color = smoker)) +
+  geom_point(alpha = 0.6)
+
+ggplot(ins, aes(age, charges, color = smoker)) +
+  geom_point(alpha = 0.6)
+
+num <- ins %>% select(age, bmi, children, charges, log_charges)
+cors <- cor(num)
+corrplot(cors, method = "color", type = "upper", tl.cex = 0.8)
+
+```
+
+
+
+Statistical Analysis & Hypothesis Testing
+```{r}
+t_smoke <- t.test(charges ~ smoker, data = ins)
+t_smoke
+t_smoke$conf.int
+
+```
+
+```{r}
+
+a_region <- aov(charges ~ region, data = ins)
+summary(a_region)
+TukeyHSD(a_region)   # optional but helpful
+
+```
+
+```{r}
+cor.test(ins$bmi, ins$charges, method = "pearson")
+cor.test(ins$bmi, ins$charges, method = "spearman")
+
+```
+
+```{r}
+chisq.test(table(ins$smoker, ins$region))
+
+```
+
+```{r}
+t.test(ins$charges)$conf.int
+
+
+```
+
+
+
+Model building
+```{r}
+set.seed(42)
+idx <- createDataPartition(ins$charges, p = 0.80, list = FALSE)
+train <- ins[idx, ]
+test  <- ins[-idx, ]
+
+```
+
+
+regression model
+
+```{r}
+m <- lm(log_charges ~ age + bmi + children + sex + smoker + region, data = train)
+summary(m)
+confint(m)
+
+```
+
+
+```{r}
+pred_log <- predict(m, newdata = test)
+
+# RMSE (log scale)
+rmse_log <- sqrt(mean((test$log_charges - pred_log)^2))
+rmse_log
+
+# R-squared on test (log scale)
+r2_test <- cor(test$log_charges, pred_log)^2
+r2_test
+
+# Optional: back-transform to dollars (approximate)
+pred_chg <- exp(pred_log)
+rmse_dollars <- sqrt(mean((test$charges - pred_chg)^2))
+rmse_dollars
+
+```
+
+
+```{r}
+par(mfrow = c(2,2))
+plot(m)
+par(mfrow = c(1,1))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
